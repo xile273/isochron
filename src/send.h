@@ -22,6 +22,7 @@ struct isochron_send {
 	unsigned char dest_mac[ETH_ALEN];
 	unsigned char src_mac[ETH_ALEN];
 	char if_name[IFNAMSIZ];
+	char hw_if_name[IFNAMSIZ];
 	char uds_remote[UNIX_PATH_MAX];
 	__u8 sendbuf[BUF_SIZ];
 	struct ptpmon *ptpmon;

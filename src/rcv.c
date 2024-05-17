@@ -30,6 +30,7 @@
 
 struct isochron_rcv {
 	char if_name[IFNAMSIZ];
+	char hw_if_name[IFNAMSIZ];
 	unsigned char dest_mac[ETH_ALEN];
 	char uds_remote[UNIX_PATH_MAX];
 	unsigned int if_index;
@@ -211,7 +212,7 @@ static int prog_init_l2_sock(struct isochron_rcv *prog)
 			goto out;
 	}
 
-	rc = sk_timestamping_init(prog->l2_sock, prog->if_name, true);
+	rc = sk_timestamping_init(prog->l2_sock, prog->hw_if_name, true);
 	if (rc)
 		goto out;
 
@@ -238,7 +239,7 @@ static int prog_init_l4_sock(struct isochron_rcv *prog)
 	if (rc)
 		return rc;
 
-	rc = sk_timestamping_init(prog->l4_sock, prog->if_name, true);
+	rc = sk_timestamping_init(prog->l4_sock, prog->hw_if_name, true);
 	if (rc) {
 		errno = -rc;
 		goto out;
@@ -388,7 +389,7 @@ static int prog_forward_port_state(void *priv, char *extack)
 	struct isochron_rcv *prog = priv;
 
 	return isochron_forward_port_state(prog->mgmt_sock, prog->ptpmon,
-					   prog->if_name, prog->rtnl, extack);
+					   prog->hw_if_name, prog->rtnl, extack);
 }
 
 static int prog_forward_port_link_state(void *priv, char *extack)
@@ -396,7 +397,7 @@ static int prog_forward_port_link_state(void *priv, char *extack)
 	struct isochron_rcv *prog = priv;
 
 	return isochron_forward_port_link_state(prog->mgmt_sock,
-						prog->if_name, prog->rtnl,
+						prog->hw_if_name, prog->rtnl,
 						extack);
 }
 
@@ -738,7 +739,7 @@ static void prog_teardown_ptpmon(struct isochron_rcv *prog)
 
 static int prog_init_sysmon(struct isochron_rcv *prog)
 {
-	prog->sysmon = sysmon_create(prog->if_name, prog->num_readings);
+	prog->sysmon = sysmon_create(prog->hw_if_name, prog->num_readings);
 	if (!prog->sysmon)
 		return -ENOMEM;
 
@@ -857,7 +858,7 @@ static int prog_init(struct isochron_rcv *prog)
 	if (rc)
 		goto out_close_rtnl;
 
-	rc = sk_validate_ts_info(prog->if_name);
+	rc = sk_validate_ts_info(prog->hw_if_name);
 	if (rc)
 		goto out_close_rtnl;
 
@@ -931,6 +932,14 @@ static int prog_parse_args(int argc, char **argv, struct isochron_rcv *prog)
 				.buf = prog->if_name,
 				.size = IFNAMSIZ - 1,
 			},
+		},{
+			.short_opt = "-I",
+			.long_opt = "--hw_interface",
+			.type = PROG_ARG_IFNAME,
+			.ifname = {
+				.buf = prog->hw_if_name,
+				.size = IFNAMSIZ - 1,
+			},
 		}, {
 			.short_opt = "-d",
 			.long_opt = "--dmac",
@@ -972,6 +981,13 @@ static int prog_parse_args(int argc, char **argv, struct isochron_rcv *prog)
 			},
 			.optional = true,
 		}, {
+			.short_opt = "-p",
+			.long_opt = "--data-port",
+			.type = PROG_ARG_LONG,
+			.long_ptr = {
+				.ptr = &prog->data_port,
+			}
+		},{
 			.short_opt = "-H",
 			.long_opt = "--sched-priority",
 			.type = PROG_ARG_LONG,

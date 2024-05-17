@@ -541,12 +541,12 @@ static int prog_init_syncmon(struct isochron_send *prog)
 	if (prog->omit_sync) {
 		sn = syncmon_add_local_sender_no_sync(syncmon, "local",
 						      prog->rtnl,
-						      prog->if_name,
+						      prog->hw_if_name,
 						      prog->iterations,
 						      prog->cycle_time);
 	} else {
 		sn = syncmon_add_local_sender(syncmon, "local", prog->rtnl,
-					      prog->if_name, prog->iterations,
+					      prog->hw_if_name, prog->iterations,
 					      prog->cycle_time, prog->ptpmon,
 					      prog->sysmon,
 					      prog->sync_threshold);
@@ -982,7 +982,7 @@ int isochron_send_init_sysmon(struct isochron_send *prog)
 	if (prog->omit_sync)
 		return 0;
 
-	prog->sysmon = sysmon_create(prog->if_name, prog->num_readings);
+	prog->sysmon = sysmon_create(prog->hw_if_name, prog->num_readings);
 	if (!prog->sysmon)
 		return -ENOMEM;
 
@@ -1030,11 +1030,11 @@ int isochron_send_init_data_sock(struct isochron_send *prog)
 	}
 
 	if (prog->do_ts) {
-		rc = sk_validate_ts_info(prog->if_name);
+		rc = sk_validate_ts_info(prog->hw_if_name);
 		if (rc)
 			goto out_close;
 
-		rc = sk_timestamping_init(prog->data_sock, prog->if_name, true);
+		rc = sk_timestamping_init(prog->data_sock, prog->hw_if_name, true);
 		if (rc < 0)
 			goto out_close;
 	}
@@ -1470,6 +1470,14 @@ int isochron_send_parse_args(int argc, char **argv, struct isochron_send *prog)
 			.type = PROG_ARG_IFNAME,
 			.ifname = {
 				.buf = prog->if_name,
+				.size = IFNAMSIZ - 1,
+			},
+		}, {
+			.short_opt = "-I",
+			.long_opt = "--hw_interface",
+			.type = PROG_ARG_IFNAME,
+			.ifname = {
+				.buf = prog->hw_if_name,
 				.size = IFNAMSIZ - 1,
 			},
 		}, {
