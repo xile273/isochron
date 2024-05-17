@@ -83,20 +83,20 @@ struct isochron_metric_stats {
 #define ISOCHRON_FMT_HEX		BIT(3)
 
 struct isochron_printf_variables {
-	__s64 advance_time;	/* A */
-	__s64 base_time;	/* B */
-	__s64 cycle_time;	/* C */
-	__s64 shift_time;	/* H */
-	__s64 window_size;	/* W */
-	__s64 tx_scheduled;	/* S */
-	__s64 tx_wakeup;	/* w */
-	__s64 tx_hwts;		/* T */
-	__s64 tx_swts;		/* t */
-	__s64 tx_sched;		/* s */
-	__u32 seqid;		/* q */
-	__s64 arrival;		/* a */
-	__s64 rx_hwts;		/* R */
-	__s64 rx_swts;		/* r */
+	__s64 advance_time;							/* A */
+	__s64 base_time;							/* B */
+	__s64 cycle_time;							/* C */
+	__s64 shift_time;							/* H */
+	__s64 window_size;							/* W */
+	__s64 tx_scheduled;							/* S */
+	__s64 tx_wakeup;							/* w */
+	__s64 tx_hwts;								/* T */
+	__s64 tx_swts;								/* t */
+	__s64 tx_sched[ISOCHRON_LOG_NUM_SCHED_TS];	/* 0 - 7 */
+	__u32 seqid;								/* q */
+	__s64 arrival;								/* a */
+	__s64 rx_hwts;								/* R */
+	__s64 rx_swts;								/* r */
 };
 
 struct isochron_variable_code {
@@ -187,9 +187,9 @@ static const struct isochron_variable_code variable_codes[256] = {
 				 ISOCHRON_FMT_UNSIGNED |
 				 ISOCHRON_FMT_HEX,
 	},
-	['s'] = {
+	['0'] = {
 		.offset = offsetof(struct isochron_printf_variables,
-				   tx_sched),
+				   tx_sched[0]),
 		.size = sizeof(__s64),
 		.valid_formats = ISOCHRON_FMT_TIME |
 				 ISOCHRON_FMT_SIGNED |
@@ -894,7 +894,7 @@ int isochron_print_stats(struct isochron_log *send_log,
 			break;
 
 		if (!__be64_to_cpu(send_pkt->swts) ||
-		    !__be64_to_cpu(send_pkt->sched_ts) ||
+		    !__be64_to_cpu(send_pkt->sched_ts[0]) ||
 		    !__be64_to_cpu(send_pkt->hwts)) {
 			not_tx_timestamped++;
 			missing = true;

@@ -12,15 +12,16 @@
 
 #define ISOCHRON_LOG_PRINTF_MAX_NUM_ARGS		256
 #define ISOCHRON_LOG_PRINTF_BUF_SIZE			4096
+#define ISOCHRON_LOG_NUM_SCHED_TS				8
 
 struct isochron_send_pkt_data {
 	__be32 seqid;
-	__be32 reserved;
+	__be32 num_sched_ts;
 	__be64 scheduled;
 	__be64 wakeup;
 	__be64 hwts;
 	__be64 swts;
-	__be64 sched_ts;
+	__be64 sched_ts[ISOCHRON_LOG_NUM_SCHED_TS];
 } __attribute((packed));
 
 struct isochron_rcv_pkt_data {

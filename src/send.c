@@ -184,9 +184,10 @@ static int prog_log_packet_no_tstamp(struct isochron_send *prog,
 	send_pkt->scheduled = hdr->scheduled;
 	send_pkt->wakeup = hdr->wakeup;
 	send_pkt->seqid = hdr->seqid;
-	send_pkt->sched_ts = 0;
 	send_pkt->swts = 0;
 	send_pkt->hwts = 0;
+
+	memset(send_pkt->sched_ts, 0, sizeof(send_pkt->sched_ts));
 
 	return 0;
 }
@@ -194,7 +195,7 @@ static int prog_log_packet_no_tstamp(struct isochron_send *prog,
 static bool
 isochron_pkt_fully_timestamped(struct isochron_send_pkt_data *send_pkt)
 {
-	return send_pkt->hwts && send_pkt->swts && send_pkt->sched_ts;
+	return send_pkt->hwts && send_pkt->swts && send_pkt->sched_ts[0];
 }
 
 static int prog_validate_premature_tx(__u32 seqid, __s64 hwts, __s64 scheduled,
@@ -321,8 +322,9 @@ static int prog_poll_txtstamps(struct isochron_send *prog, int timeout)
 
 	switch (tstamp.tstype) {
 	case SCM_TSTAMP_SCHED:
-		if (swts_utc)
-			send_pkt->sched_ts = swts;
+		if (swts_utc && send_pkt->num_sched_ts < ISOCHRON_LOG_NUM_SCHED_TS)
+			send_pkt->sched_ts[send_pkt->num_sched_ts] = swts;
+			send_pkt->num_sched_ts += 1;
 		break;
 	case SCM_TSTAMP_SND:
 		if (swts_utc)
@@ -396,7 +398,7 @@ static int isochron_missing_txts_dump(void *priv, void *pkt)
 		missing_hwts = true;
 	if (!send_pkt->swts)
 		missing_swts = true;
-	if (!send_pkt->sched_ts)
+	if (!send_pkt->sched_ts[0])
 		missing_sched_ts = true;
 
 	if (!missing_hwts && !missing_swts && !missing_sched_ts)
