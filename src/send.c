@@ -322,9 +322,10 @@ static int prog_poll_txtstamps(struct isochron_send *prog, int timeout)
 
 	switch (tstamp.tstype) {
 	case SCM_TSTAMP_SCHED:
-		if (swts_utc && send_pkt->num_sched_ts < ISOCHRON_LOG_NUM_SCHED_TS)
+		if (swts_utc && send_pkt->num_sched_ts < ISOCHRON_LOG_NUM_SCHED_TS) {
 			send_pkt->sched_ts[send_pkt->num_sched_ts] = swts;
 			send_pkt->num_sched_ts += 1;
+		}
 		break;
 	case SCM_TSTAMP_SND:
 		if (swts_utc)

@@ -92,6 +92,7 @@ struct isochron_printf_variables {
 	__s64 tx_wakeup;							/* w */
 	__s64 tx_hwts;								/* T */
 	__s64 tx_swts;								/* t */
+	__u32 num_tx_sched;							/* s */
 	__s64 tx_sched[ISOCHRON_LOG_NUM_SCHED_TS];	/* 0 - 7 */
 	__u32 seqid;								/* q */
 	__s64 arrival;								/* a */
@@ -187,9 +188,79 @@ static const struct isochron_variable_code variable_codes[256] = {
 				 ISOCHRON_FMT_UNSIGNED |
 				 ISOCHRON_FMT_HEX,
 	},
+	['s'] = {
+		.offset = offsetof(struct isochron_printf_variables,
+				   num_tx_sched),
+		.size = sizeof(__u32),
+		.valid_formats = ISOCHRON_FMT_UNSIGNED |
+				 ISOCHRON_FMT_HEX,
+	},
 	['0'] = {
 		.offset = offsetof(struct isochron_printf_variables,
 				   tx_sched[0]),
+		.size = sizeof(__s64),
+		.valid_formats = ISOCHRON_FMT_TIME |
+				 ISOCHRON_FMT_SIGNED |
+				 ISOCHRON_FMT_UNSIGNED |
+				 ISOCHRON_FMT_HEX,
+	},
+	['1'] = {
+		.offset = offsetof(struct isochron_printf_variables,
+				   tx_sched[1]),
+		.size = sizeof(__s64),
+		.valid_formats = ISOCHRON_FMT_TIME |
+				 ISOCHRON_FMT_SIGNED |
+				 ISOCHRON_FMT_UNSIGNED |
+				 ISOCHRON_FMT_HEX,
+	},
+	['2'] = {
+		.offset = offsetof(struct isochron_printf_variables,
+				   tx_sched[2]),
+		.size = sizeof(__s64),
+		.valid_formats = ISOCHRON_FMT_TIME |
+				 ISOCHRON_FMT_SIGNED |
+				 ISOCHRON_FMT_UNSIGNED |
+				 ISOCHRON_FMT_HEX,
+	},
+	['3'] = {
+		.offset = offsetof(struct isochron_printf_variables,
+				   tx_sched[3]),
+		.size = sizeof(__s64),
+		.valid_formats = ISOCHRON_FMT_TIME |
+				 ISOCHRON_FMT_SIGNED |
+				 ISOCHRON_FMT_UNSIGNED |
+				 ISOCHRON_FMT_HEX,
+	},
+	['4'] = {
+		.offset = offsetof(struct isochron_printf_variables,
+				   tx_sched[4]),
+		.size = sizeof(__s64),
+		.valid_formats = ISOCHRON_FMT_TIME |
+				 ISOCHRON_FMT_SIGNED |
+				 ISOCHRON_FMT_UNSIGNED |
+				 ISOCHRON_FMT_HEX,
+	},
+	['5'] = {
+		.offset = offsetof(struct isochron_printf_variables,
+				   tx_sched[5]),
+		.size = sizeof(__s64),
+		.valid_formats = ISOCHRON_FMT_TIME |
+				 ISOCHRON_FMT_SIGNED |
+				 ISOCHRON_FMT_UNSIGNED |
+				 ISOCHRON_FMT_HEX,
+	},
+	['6'] = {
+		.offset = offsetof(struct isochron_printf_variables,
+				   tx_sched[6]),
+		.size = sizeof(__s64),
+		.valid_formats = ISOCHRON_FMT_TIME |
+				 ISOCHRON_FMT_SIGNED |
+				 ISOCHRON_FMT_UNSIGNED |
+				 ISOCHRON_FMT_HEX,
+	},
+	['7'] = {
+		.offset = offsetof(struct isochron_printf_variables,
+				   tx_sched[7]),
 		.size = sizeof(__s64),
 		.valid_formats = ISOCHRON_FMT_TIME |
 				 ISOCHRON_FMT_SIGNED |
@@ -440,11 +511,15 @@ isochron_printf_vars_get(const struct isochron_send_pkt_data *send_pkt,
 	v->tx_wakeup = (__s64 )__be64_to_cpu(send_pkt->wakeup);
 	v->tx_hwts = (__s64 )__be64_to_cpu(send_pkt->hwts);
 	v->tx_swts = (__s64 )__be64_to_cpu(send_pkt->swts);
-	v->tx_sched = (__s64 )__be64_to_cpu(send_pkt->sched_ts);
 	v->rx_hwts = (__s64 )__be64_to_cpu(rcv_pkt->hwts);
 	v->rx_swts = (__s64 )__be64_to_cpu(rcv_pkt->swts);
 	v->arrival = (__s64 )__be64_to_cpu(rcv_pkt->arrival);
 	v->seqid = (__u32 )__be32_to_cpu(send_pkt->seqid);
+	
+	v->num_tx_sched = (__u32)__be32_to_cpu(send_pkt->num_sched_ts);
+	for(__u32 i = 0; i < ISOCHRON_LOG_NUM_SCHED_TS; i++) {
+		v->tx_sched[i] = (__s64)__be64_to_cpu(send_pkt->sched_ts[i]);
+	}
 }
 
 static int
@@ -782,7 +857,11 @@ static void isochron_process_stat(const struct isochron_printf_variables *v,
 	entry->wakeup_latency = v->tx_wakeup -
 				(v->tx_scheduled - v->advance_time);
 	entry->sender_latency = v->tx_swts - v->tx_wakeup;
-	entry->driver_latency = v->tx_swts - v->tx_sched;
+	/* We take the last received sched timestamp to calculate the total 
+	 * driver latency. This will include all drivers the packet has to 
+	 * traverse.
+	 */
+	entry->driver_latency = v->tx_swts - v->tx_sched[v->num_tx_sched - 1];
 	entry->arrival_latency = v->arrival - v->rx_hwts;
 
 	if (v->tx_hwts > v->tx_scheduled)
